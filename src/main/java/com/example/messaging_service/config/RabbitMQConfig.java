@@ -30,4 +30,8 @@ public class RabbitMQConfig {
         rabbitTemplate.setMessageConverter(jsonMessageConverter());
         return rabbitTemplate;
     }
+
+    public String getQueueName() {
+        return queueName;
+    }
 }
