@@ -1,0 +1,2 @@
+2025-04-12 01:34:37 [main] INFO  c.e.m.service.EmailService - Cancellation email sent to john.doe@example.com
+2025-04-12 01:34:38 [main] INFO  c.e.m.service.EmailService - Booking confirmation email sent to john.doe@example.com

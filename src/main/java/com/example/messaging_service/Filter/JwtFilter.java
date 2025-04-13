@@ -5,6 +5,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -21,6 +23,8 @@ import java.util.List;
 @Component
 public class JwtFilter extends OncePerRequestFilter {
 
+    private static final Logger logger = LoggerFactory.getLogger(JwtFilter.class);
+
     @Autowired
     private JWTService jwtService;
 
@@ -33,31 +37,31 @@ public class JwtFilter extends OncePerRequestFilter {
         String username = null;
         String role = null;
 
-        // Extract token from Authorization header
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             token = authHeader.substring(7).trim();
-            username = jwtService.extractUsername(token);
-            role = jwtService.extractRole(token);
+            try {
+                username = jwtService.extractUsername(token);
+                role = jwtService.extractRole(token);
+                logger.debug("JWT extracted - Username: {}, Role: {}", username, role);
+            } catch (Exception e) {
+                logger.warn("Failed to extract or parse JWT: {}", e.getMessage());
+            }
+        } else {
+            logger.debug("No JWT token found in Authorization header");
         }
 
-        // Debugging logs
-        System.out.println("Auth Header: " + authHeader);
-        System.out.println("Extracted Username: " + username);
-        System.out.println("Extracted Role: " + role);
-
-        // Validate token and authenticate user
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            // Ensure the role has the correct "ROLE_" prefix
-            String formattedRole = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+            String formattedRole = role != null && role.startsWith("ROLE_") ? role : "ROLE_" + role;
             UserDetails userDetails = new User(username, "", List.of(new SimpleGrantedAuthority(formattedRole)));
-
-            System.out.println("Assigned Authorities: " + userDetails.getAuthorities());
 
             if (jwtService.validateToken(token, userDetails)) {
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
+                logger.info("JWT validated and authentication set for user: {}", username);
+            } else {
+                logger.warn("JWT validation failed for user: {}", username);
             }
         }
 

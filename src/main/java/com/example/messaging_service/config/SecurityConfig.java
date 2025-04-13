@@ -1,6 +1,8 @@
 package com.example.messaging_service.config;
 
 import com.example.messaging_service.Filter.JwtFilter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,28 +24,50 @@ import java.util.List;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
+
     @Autowired
     private JwtFilter jwtFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        logger.info("Setting up security filter chain");
+
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/message/notify").hasRole("PASSENGER")
-                        .anyRequest().authenticated()
-                )
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .cors(cors -> {
+                    logger.debug("Enabling CORS with custom configuration");
+                    cors.configurationSource(corsConfigurationSource());
+                })
+                .csrf(csrf -> {
+                    logger.debug("Disabling CSRF protection");
+                    csrf.disable();
+                })
+                .authorizeHttpRequests(auth -> {
+                    logger.info("Configuring endpoint authorization");
+                    auth.requestMatchers("/message/notify").hasRole("PASSENGER");
+                    auth.anyRequest().authenticated();
+                })
+                .sessionManagement(session -> {
+                    logger.debug("Setting session policy to stateless");
+                    session.sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+                })
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
-                .formLogin(form -> form.disable())
-                .httpBasic(httpBasic -> httpBasic.disable());
+                .formLogin(form -> {
+                    logger.debug("Disabling form login");
+                    form.disable();
+                })
+                .httpBasic(httpBasic -> {
+                    logger.debug("Disabling HTTP Basic auth");
+                    httpBasic.disable();
+                });
 
         return http.build();
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+        logger.info("Configuring CORS settings");
+
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of("http://localhost:4201"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
@@ -57,6 +81,8 @@ public class SecurityConfig {
 
     @Bean
     public HttpFirewall relaxedHttpFirewall() {
+        logger.info("Applying relaxed HTTP firewall settings");
+
         StrictHttpFirewall firewall = new StrictHttpFirewall();
         firewall.setAllowUrlEncodedSlash(true);
         firewall.setAllowSemicolon(true);
@@ -66,6 +92,7 @@ public class SecurityConfig {
 
     @Bean
     public UserDetailsService userDetailsService() {
+        logger.warn("UserDetailsService is currently returning null (stub)");
         return username -> null;
     }
 }
